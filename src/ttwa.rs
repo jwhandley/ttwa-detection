@@ -67,12 +67,12 @@ impl TravelToWorkAreas {
         let self_containment = self.self_containment_of_area(area_index);
 
     
-        if size > MIN_SIZE && self_containment > TARGET_CONTAINMENT {
+        if (size > MIN_SIZE) && (self_containment > TARGET_CONTAINMENT) {
             1.0
-        } else if size > TARGET_SIZE && self_containment > MIN_CONTAINMENT {
+        } else if (size > TARGET_SIZE) && (self_containment > MIN_CONTAINMENT) {
             1.0
         } else {
-            0.0
+            (size - MIN_SIZE)/(TARGET_SIZE - MIN_SIZE) + (self_containment - MIN_CONTAINMENT)/(TARGET_CONTAINMENT - MIN_CONTAINMENT)
         }
     }
 
