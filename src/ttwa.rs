@@ -5,7 +5,7 @@ const MIN_SIZE: f64 = 3500.0;
 const TARGET_SIZE: f64 = 25000.0;
 const MIN_CONTAINMENT: f64 = 0.667;
 const TARGET_CONTAINMENT: f64 = 0.75;
-const THRESHOLD: f64 = 0.0;
+const THRESHOLD: f64 = 0.5;
 
 pub struct TravelToWorkAreas {
     pub adjacency_matrix: Array2<i32>,     // Adjacency matrix
@@ -66,11 +66,14 @@ impl TravelToWorkAreas {
         let size = self.flow_from_area(area_index) as f64;
         let self_containment = self.self_containment_of_area(area_index);
 
-        let transformed_size = (size - MIN_SIZE) / (TARGET_SIZE - MIN_SIZE);
-        let transformed_containment =
-            (self_containment - MIN_CONTAINMENT) / (TARGET_CONTAINMENT - MIN_CONTAINMENT);
-
-        transformed_size + transformed_containment
+    
+        if size > MIN_SIZE && self_containment > TARGET_CONTAINMENT {
+            1.0
+        } else if size > TARGET_SIZE && self_containment > MIN_CONTAINMENT {
+            1.0
+        } else {
+            0.0
+        }
     }
 
     fn tij2_index(&self, node: usize, area_index: &usize) -> f64 {

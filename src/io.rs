@@ -17,3 +17,15 @@ pub fn read_adjacency_matrix(path: &Path) -> Result<(Vec<String>, Vec<Vec<i32>>)
     Ok((codes, adjacency_matrix))
 }
 
+pub fn write_nodes_to_areas(
+    path: &Path,
+    codes: &Vec<String>,
+    nodes_to_areas: &std::collections::HashMap<usize, usize>,
+) -> Result<()> {
+    let mut writer = csv::Writer::from_path(path)?;
+    writer.write_record(&["code", "area"])?;
+    for (node, area) in nodes_to_areas {
+        writer.write_record(&[codes[*node].as_str(), area.to_string().as_str()])?;
+    }
+    Ok(())
+}
