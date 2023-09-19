@@ -8,11 +8,11 @@ pub fn read_adjacency_matrix(path: &Path) -> Result<(Vec<String>, Vec<Vec<i32>>)
     for result in reader.records() {
         let record = result?;
         codes.push(record.get(0).unwrap().to_string());
-        let mut row = Vec::new();
-        for i in 1..record.len() {
-            row.push(record.get(i).unwrap().parse::<i32>()?);
-        }
-        adjacency_matrix.push(row);
+        let row: Result<Vec<i32>, _> = (1..record.len())
+            .map(|i| record.get(i).unwrap().parse::<i32>())
+            .collect();
+
+        adjacency_matrix.push(row?);
     }
     Ok((codes, adjacency_matrix))
 }

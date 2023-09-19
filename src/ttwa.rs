@@ -12,6 +12,7 @@ pub struct TravelToWorkAreas {
     pub areas: HashMap<usize, Vec<usize>>, // Nodes in each area
     pub flow_to_node: Vec<i32>,
     pub flow_from_node: Vec<i32>,
+    pub self_containment: HashMap<usize, f64>,
 }
 
 impl TravelToWorkAreas {
@@ -34,7 +35,8 @@ impl TravelToWorkAreas {
             adjacency_matrix: array2,
             areas: HashMap::new(),
             flow_to_node,
-            flow_from_node
+            flow_from_node,
+            self_containment: HashMap::new(),
         }
     }
 
@@ -64,7 +66,7 @@ impl TravelToWorkAreas {
 
     fn x_equation(&self, area_index: &usize) -> f64 {
         let size = self.flow_from_area(area_index) as f64;
-        let self_containment = self.self_containment_of_area(area_index);
+        let self_containment = *self.self_containment.get(area_index).unwrap();
 
     
         if (size > MIN_SIZE) && (self_containment > TARGET_CONTAINMENT) {
@@ -119,6 +121,10 @@ impl TravelToWorkAreas {
         for node in 0..self.adjacency_matrix.shape()[0] {
             self.areas.insert(node, vec![node]);
         }
+
+        for area in self.areas.keys() {
+            self.self_containment.insert(*area, self.self_containment_of_area(area));
+        }
     
         let mut iter = 0;
     
@@ -147,11 +153,13 @@ impl TravelToWorkAreas {
     
             // Remove the worst area, capturing its nodes
             let worst_area = self.areas.remove(&worst_area_index).unwrap();
+            self.self_containment.remove(&worst_area_index);
     
             // For each node in the worst area, add it to the best fit area
             for node in worst_area {
                 let best_fit_area = self.find_best_fit_area(node);
                 self.areas.get_mut(&best_fit_area).unwrap().push(node);
+                self.self_containment.insert(best_fit_area, self.self_containment_of_area(&best_fit_area));
             }
     
             iter += 1;
