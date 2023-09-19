@@ -12,6 +12,8 @@ pub struct TravelToWorkAreas {
     pub areas: HashMap<usize, Vec<usize>>, // Nodes in each area
     pub flow_to_node: Vec<i32>,
     pub flow_from_node: Vec<i32>,
+    pub flow_to_area: HashMap<usize, i32>,
+    pub flow_from_area: HashMap<usize, i32>,
     pub self_containment: HashMap<usize, f64>,
 }
 
@@ -37,6 +39,8 @@ impl TravelToWorkAreas {
             flow_to_node,
             flow_from_node,
             self_containment: HashMap::new(),
+            flow_to_area: HashMap::new(),
+            flow_from_area: HashMap::new(),
         }
     }
 
@@ -79,25 +83,22 @@ impl TravelToWorkAreas {
     }
 
     fn tij2_index(&self, node: usize, area_index: &usize) -> f64 {
-        let area_nodes = &self.areas.get(area_index).unwrap();
-    
-        // Calculate flow from the node to the area
-        let flow_node_to_area: i32 = area_nodes.iter()
-            .map(|&area_node| self.adjacency_matrix[(node, area_node)])
-            .sum();
-    
-        // Calculate flow from the area to the node
-        let flow_area_to_node: i32 = area_nodes.iter()
-            .map(|&area_node| self.adjacency_matrix[(area_node, node)])
-            .sum();
-    
+        let area_nodes = self.areas.get(area_index).unwrap();
+        
+        let (mut flow_node_to_area, mut flow_area_to_node) = (0, 0);
+        for &area_node in area_nodes {
+            flow_node_to_area += self.adjacency_matrix[(node, area_node)];
+            flow_area_to_node += self.adjacency_matrix[(area_node, node)];
+        }
+        
         let a = flow_node_to_area as f64 / self.flow_from_node[node] as f64;
-        let b = flow_node_to_area as f64 / self.flow_to_area(area_index) as f64;
-        let c = flow_area_to_node as f64 / self.flow_from_area(area_index) as f64;
+        let b = flow_node_to_area as f64 / self.flow_to_area[area_index] as f64;
+        let c = flow_area_to_node as f64 / self.flow_from_area[area_index] as f64;
         let d = flow_area_to_node as f64 / self.flow_to_node[node] as f64;
-    
+        
         (a * b) + (c * d)
     }
+    
     
 
     fn find_best_fit_area(&self, node: usize) -> usize {
@@ -120,6 +121,8 @@ impl TravelToWorkAreas {
         // Create an area for each node
         for node in 0..self.adjacency_matrix.shape()[0] {
             self.areas.insert(node, vec![node]);
+            self.flow_to_area.insert(node, self.flow_to_node[node]);
+            self.flow_from_area.insert(node, self.flow_from_node[node]);
         }
 
         for area in self.areas.keys() {
@@ -154,12 +157,16 @@ impl TravelToWorkAreas {
             // Remove the worst area, capturing its nodes
             let worst_area = self.areas.remove(&worst_area_index).unwrap();
             self.self_containment.remove(&worst_area_index);
+            self.flow_to_area.remove(&worst_area_index);
+            self.flow_from_area.remove(&worst_area_index);
     
             // For each node in the worst area, add it to the best fit area
             for node in worst_area {
                 let best_fit_area = self.find_best_fit_area(node);
                 self.areas.get_mut(&best_fit_area).unwrap().push(node);
                 self.self_containment.insert(best_fit_area, self.self_containment_of_area(&best_fit_area));
+                *self.flow_from_area.get_mut(&best_fit_area).unwrap() += self.flow_from_node[node];
+                *self.flow_to_area.get_mut(&best_fit_area).unwrap() += self.flow_to_node[node];
             }
     
             iter += 1;
