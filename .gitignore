@@ -2,3 +2,6 @@
 /data
 /output
 /notebooks
+perf.data
+perf.data.old
+flamegraph.svg
