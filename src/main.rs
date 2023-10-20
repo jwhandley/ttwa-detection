@@ -1,13 +1,14 @@
 use anyhow::Result;
 use std::path::Path;
 mod io;
-mod ttwa;
+mod graph;
+mod ttwa_naive;
 use clap::Parser;
 
 #[derive(Parser)]
 struct Args {
     input: String,
-    output: String,
+    max_iter: Option<usize>,
 }
 
 fn main() -> Result<()> {
@@ -24,21 +25,15 @@ fn main() -> Result<()> {
         adjacency_matrix[0].len()
     );
 
-    // Create a new TTWA instance
-    let mut ttwa = ttwa::TravelToWorkAreas::new(adjacency_matrix);
-    // Fit the travel to work areas
-    ttwa.fit_travel_to_work_areas();
+    // Create graph from adjacency matrix
+    let graph = graph::Graph::from_adjacency_matrix(adjacency_matrix);
 
-    // Invert areas to get a map of nodes to areas
-    let mut nodes_to_areas: std::collections::HashMap<usize, usize> = std::collections::HashMap::new();
-    for (area_index, area_nodes) in ttwa.areas.iter() {
-        for &node in area_nodes {
-            nodes_to_areas.insert(node, *area_index);
-        }
-    }
+    // Create a TTWA structure
+    let mut ttwa = ttwa_naive::AreaCollection::new(graph);
+    ttwa.fit(args.max_iter.unwrap_or(usize::MAX));
 
-    // Write result to csv
-    io::write_nodes_to_areas(Path::new(&args.output), &codes, &nodes_to_areas)?;
+    // Print the results
+    println!("TTWAs:\n {:?}", ttwa.areas.len());
 
     Ok(())
 }
