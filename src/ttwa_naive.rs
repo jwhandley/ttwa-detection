@@ -1,5 +1,4 @@
 use crate::graph::{Graph, Node};
-use std::collections::HashSet;
 const THRESHOLD: f64 = 0.0;
 const MIN_SIZE: i32 = 3500;
 const TARGET_SIZE: i32 = 25000;
@@ -169,7 +168,7 @@ impl AreaCollection {
             if worst_score > THRESHOLD {
                 break;
             }
-            if iter % 500 == 0 {
+            if iter % 1000 == 0 {
                 println!("Iteration: {}, worst score {}", iter, worst_score);
             }
 
@@ -177,6 +176,11 @@ impl AreaCollection {
 
             // Remove worst area, capturing its nodes
             let area_nodes = worst_area.node_ids.clone();
+            for area_node in area_nodes.iter() {
+                if let Some(area) = &mut self.areas[worst_area.id] {
+                    area.remove_node(*area_node, &mut self.graph);
+                }
+            }
 
             // Find the best tij2 for each node
 
@@ -185,20 +189,23 @@ impl AreaCollection {
                 let mut best_score = f64::MIN;
 
                 // Find relevant areas, i.e. areas whose nodes are connected to this node
-                let mut relevant_areas = HashSet::new();
+                let mut relevant_areas = Vec::new();
                 let node = &self.graph.nodes[*node_idx];
 
                 
                 for edge in node.out_edges.iter().chain(node.in_edges.iter()) {
                     if self.graph.nodes[edge.target].area_id != usize::MAX {
-                        relevant_areas.insert(self.graph.nodes[edge.target].area_id);
+                        relevant_areas.push(self.graph.nodes[edge.target].area_id);
                     }
                     
                     if self.graph.nodes[edge.source].area_id != usize::MAX {
-                        relevant_areas.insert(self.graph.nodes[edge.source].area_id);
+                        relevant_areas.push(self.graph.nodes[edge.source].area_id);
                     }
                     
                 }
+
+                relevant_areas.sort_unstable();
+                relevant_areas.dedup();
                 
 
                 // Now, compute the tij2 score only for the relevant areas

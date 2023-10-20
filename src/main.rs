@@ -37,7 +37,7 @@ fn main() -> Result<()> {
 
     // Print the results
     for area in ttwa.areas.iter().flatten() {
-        println!("Area {} has {} nodes", area.id, area.node_ids.len());
+        println!("Area {} has {:#?} nodes", codes[area.id], area.node_ids.iter().map(|&x| codes[x].to_owned()).collect::<Vec<String>>());
     }
 
     Ok(())
