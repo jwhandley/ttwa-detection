@@ -87,18 +87,12 @@ impl AreaCollection {
         self.areas.push(Some(area));
     }
 
-    fn remove_area(&mut self, area: &Area) -> Vec<usize> {
-        let nodes = area
-            .node_ids
-            .iter()
-            .map(|node_id| {
-                self.graph.nodes[*node_id].area_id = usize::MAX;
-                *node_id
-            })
-            .collect();
+    fn remove_area(&mut self, area: &Area) {
+        area.node_ids.iter().for_each(|node_id| {
+            self.graph.nodes[*node_id].area_id = usize::MAX;
+        });
 
         self.areas[area.id] = None;
-        nodes
     }
 
     fn combined_flow(&self, node: &Node, area: &Area) -> (i32, i32) {
@@ -175,14 +169,14 @@ impl AreaCollection {
             if worst_score > THRESHOLD {
                 break;
             }
-            if iter % 100 == 0 {
+            if iter % 500 == 0 {
                 println!("Iteration: {}, worst score {}", iter, worst_score);
             }
 
             let worst_area = worst_area.unwrap();
 
             // Remove worst area, capturing its nodes
-            let area_nodes = self.remove_area(&worst_area);
+            let area_nodes = worst_area.node_ids.clone();
 
             // Find the best tij2 for each node
 
@@ -194,11 +188,18 @@ impl AreaCollection {
                 let mut relevant_areas = HashSet::new();
                 let node = &self.graph.nodes[*node_idx];
 
-                if node.area_id != worst_area.id && node.area_id != usize::MAX {
-                    for _ in node.out_edges.iter().chain(node.in_edges.iter()) {
-                        relevant_areas.insert(node.area_id);
+                
+                for edge in node.out_edges.iter().chain(node.in_edges.iter()) {
+                    if self.graph.nodes[edge.target].area_id != usize::MAX {
+                        relevant_areas.insert(self.graph.nodes[edge.target].area_id);
                     }
+                    
+                    if self.graph.nodes[edge.source].area_id != usize::MAX {
+                        relevant_areas.insert(self.graph.nodes[edge.source].area_id);
+                    }
+                    
                 }
+                
 
                 // Now, compute the tij2 score only for the relevant areas
                 for area_idx in relevant_areas.iter() {
@@ -214,8 +215,17 @@ impl AreaCollection {
                         .as_mut()
                         .unwrap()
                         .add_node(*node_idx, &mut self.graph);
+
+                    if *best_idx != worst_area.id {
+                        self.remove_area(&worst_area);
+                    }
+                    
                 }
             }
+
+            
+            
+            
 
             iter += 1;
 

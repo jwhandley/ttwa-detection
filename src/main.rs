@@ -5,6 +5,8 @@ mod io;
 mod ttwa_naive;
 use clap::Parser;
 
+use crate::io::read_adjacency_matrix_to_graph;
+
 #[derive(Parser)]
 struct Args {
     input: String,
@@ -15,18 +17,19 @@ fn main() -> Result<()> {
     let args = Args::parse();
     let path = args.input;
 
-    println!("Reading data from {}", path);
-    let (codes, adjacency_matrix) = io::read_adjacency_matrix(Path::new(&path))?;
+    // println!("Reading data from {}", path);
+    // let (codes, adjacency_matrix) = io::read_adjacency_matrix(Path::new(&path))?;
 
-    println!(
-        "Read {} nodes and {}x{} adjacency matrix",
-        codes.len(),
-        adjacency_matrix.len(),
-        adjacency_matrix[0].len()
-    );
+    // println!(
+    //     "Read {} nodes and {}x{} adjacency matrix",
+    //     codes.len(),
+    //     adjacency_matrix.len(),
+    //     adjacency_matrix[0].len()
+    // );
 
     // Create graph from adjacency matrix
-    let graph = graph::Graph::from_adjacency_matrix(adjacency_matrix);
+    // let graph = graph::Graph::from_adjacency_matrix(adjacency_matrix);
+    let (codes, graph) = read_adjacency_matrix_to_graph(Path::new(&path))?;
 
     // Create a TTWA structure
     let mut ttwa = ttwa_naive::AreaCollection::new(graph);

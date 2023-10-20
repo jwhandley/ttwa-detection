@@ -1,3 +1,4 @@
+use crate::graph::Graph;
 use anyhow::Result;
 use std::path::Path;
 
@@ -16,6 +17,22 @@ pub fn read_adjacency_matrix(path: &Path) -> Result<(Vec<String>, Vec<Vec<i32>>)
         adjacency_matrix.push(row?);
     }
     Ok((codes, adjacency_matrix))
+}
+
+pub fn read_adjacency_matrix_to_graph(path: &Path) -> Result<(Vec<String>, Graph)> {
+    let mut adjacency_matrix = Vec::new();
+    let mut reader = csv::Reader::from_path(path)?;
+    let mut codes = Vec::new();
+    for result in reader.records() {
+        let record = result?;
+        let code = record.get(0).unwrap().to_owned();
+        codes.push(code);
+        let row: Result<Vec<i32>, _> = (1..record.len())
+            .map(|i| record.get(i).unwrap().parse::<i32>())
+            .collect();
+        adjacency_matrix.push(row?);
+    }
+    Ok((codes, Graph::from_adjacency_matrix(adjacency_matrix)))
 }
 
 #[allow(dead_code)]
