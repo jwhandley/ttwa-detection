@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 #[derive(PartialEq, Eq, Hash, Clone, Debug)]
 pub struct Node {
     pub id: usize,
@@ -33,7 +31,7 @@ pub struct Edge {
 
 #[derive(Debug)]
 pub struct Graph {
-    pub nodes: HashMap<usize, Node>,
+    pub nodes: Vec<Node>,
     pub edges: Vec<Edge>,
 }
 
@@ -41,7 +39,7 @@ pub struct Graph {
 impl Graph {
     fn new() -> Graph {
         Graph {
-            nodes: HashMap::new(),
+            nodes: Vec::new(),
             edges: Vec::new(),
         }
     }
@@ -71,54 +69,29 @@ impl Graph {
         self.nodes.insert(node.id, node.clone());
     }
 
-    fn remove_node(&mut self, node: &Node) {
-        // Update nodes
-        self.nodes.remove(&node.id);
-
-        // Update all edges
-        self.edges
-            .retain(|e| e.source != node.id && e.target != node.id);
-    }
-
     fn add_edge(&mut self, edge: Edge) {
         // Update degrees
         // This won't work if we've removed nodes
 
-        self.nodes.get_mut(&edge.source).unwrap().out_degree += edge.weight;
-        self.nodes.get_mut(&edge.target).unwrap().in_degree += edge.weight;
+        self.nodes[edge.source].out_degree += edge.weight;
+        self.nodes[edge.target].in_degree += edge.weight;
 
         // Update edges
-        self.nodes
-            .get_mut(&edge.source)
-            .unwrap()
-            .out_edges
-            .push(edge.clone());
+        self.nodes[edge.source].out_edges.push(edge.clone());
 
-        self.nodes
-            .get_mut(&edge.target)
-            .unwrap()
-            .in_edges
-            .push(edge.clone());
+        self.nodes[edge.target].in_edges.push(edge.clone());
 
         self.edges.push(edge);
     }
 
     fn remove_edge(&mut self, edge: Edge) {
         // Update degrees
-        self.nodes.get_mut(&edge.source).unwrap().out_degree -= edge.weight;
-        self.nodes.get_mut(&edge.target).unwrap().in_degree -= edge.weight;
+        self.nodes[edge.source].out_degree -= edge.weight;
+        self.nodes[edge.target].in_degree -= edge.weight;
 
         // Update edges
-        self.nodes
-            .get_mut(&edge.source)
-            .unwrap()
-            .out_edges
-            .retain(|e| e != &edge);
-        self.nodes
-            .get_mut(&edge.target)
-            .unwrap()
-            .in_edges
-            .retain(|e| e != &edge);
+        self.nodes[edge.source].out_edges.retain(|e| e != &edge);
+        self.nodes[edge.target].in_edges.retain(|e| e != &edge);
 
         self.edges.retain(|e| e != &edge);
     }
