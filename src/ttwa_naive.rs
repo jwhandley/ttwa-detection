@@ -9,9 +9,10 @@ const TARGET_CONTAINMENT: f64 = 0.75;
 pub struct Area {
     pub id: usize,
     pub node_ids: Vec<usize>,
-    flow_to_area: i32,
-    flow_from_area: i32,
-    self_containment: i32,
+    pub flow_to_area: i32,
+    pub flow_from_area: i32,
+    pub self_containment: i32,
+    pub x_score: f64,
 }
 
 #[allow(dead_code)]
@@ -23,48 +24,87 @@ impl Area {
             flow_to_area: 0,
             flow_from_area: 0,
             self_containment: 0,
+            x_score: 0.0,
         }
     }
 
     fn add_node(&mut self, node_id: usize, graph: &mut Graph) {
         graph.nodes[node_id].area_id = self.id;
+
         let node = &graph.nodes[node_id];
-        self.flow_to_area += node.in_degree;
-        self.flow_from_area += node.out_degree;
-        self.self_containment += node
-            .out_edges
+        self.flow_to_area += node
+            .edges
             .iter()
-            .filter_map(|e| {
-                if self.node_ids.iter().any(|n| n == &e.target) {
-                    Some(e.weight)
-                } else {
-                    None
-                }
+            .filter(|&edge| graph.nodes[edge.target].area_id == self.id)
+            .map(|edge| edge.weight)
+            .sum::<i32>();
+        self.flow_from_area += node
+            .edges
+            .iter()
+            .filter(|&edge| graph.nodes[edge.source].area_id == self.id)
+            .map(|edge| edge.weight)
+            .sum::<i32>();
+
+        self.self_containment += node
+            .edges
+            .iter()
+            .filter(|&edge| {
+                graph.nodes[edge.source].area_id == self.id
+                    && graph.nodes[edge.target].area_id == self.id
             })
+            .map(|edge| edge.weight)
             .sum::<i32>();
         self.node_ids.push(node.id);
+
+        self.x_score = self.x_equation();
     }
 
     fn remove_node(&mut self, node_id: usize, graph: &mut Graph) {
         let node = &graph.nodes[node_id];
         if self.node_ids.contains(&node_id) {
             self.node_ids.retain(|&n| n != node_id);
-            self.flow_to_area -= node.in_degree;
-            self.flow_from_area -= node.out_degree;
-            self.self_containment -= node
-                .out_edges
+
+            self.flow_to_area -= node
+                .edges
                 .iter()
-                .filter_map(|e| {
-                    if self.node_ids.iter().any(|n| n == &e.target) {
-                        Some(e.weight)
-                    } else {
-                        None
-                    }
+                .filter(|&edge| graph.nodes[edge.target].area_id == self.id)
+                .map(|edge| edge.weight)
+                .sum::<i32>();
+            self.flow_from_area -= node
+                .edges
+                .iter()
+                .filter(|&edge| graph.nodes[edge.source].area_id == self.id)
+                .map(|edge| edge.weight)
+                .sum::<i32>();
+
+            self.self_containment -= node
+                .edges
+                .iter()
+                .filter(|&edge| {
+                    graph.nodes[edge.source].area_id == self.id
+                        && graph.nodes[edge.target].area_id == self.id
                 })
+                .map(|edge| edge.weight)
                 .sum::<i32>();
 
             graph.nodes[node_id].area_id = usize::MAX;
+            self.x_score = self.x_equation();
         };
+    }
+
+    fn x_equation(&self) -> f64 {
+        let self_containment = self.self_containment as f64 / self.flow_from_area as f64;
+
+        let size = self.flow_from_area;
+
+        if (size > MIN_SIZE) && (self_containment > TARGET_CONTAINMENT) {
+            1.0
+        } else if (size > TARGET_SIZE) && (self_containment > MIN_CONTAINMENT) {
+            1.0
+        } else {
+            (size - MIN_SIZE) as f64 / (TARGET_SIZE - MIN_SIZE) as f64
+                + (self_containment - MIN_CONTAINMENT) / (TARGET_CONTAINMENT - MIN_CONTAINMENT)
+        }
     }
 }
 
@@ -98,14 +138,10 @@ impl AreaCollection {
         let mut node_to_area = 0;
         let mut area_to_node = 0;
 
-        for edge in &node.out_edges {
+        for edge in &node.edges {
             if self.graph.nodes[edge.target].area_id == area.id {
                 node_to_area += edge.weight;
-            }
-        }
-
-        for edge in &node.in_edges {
-            if self.graph.nodes[edge.source].area_id == area.id {
+            } else if self.graph.nodes[edge.source].area_id == area.id {
                 area_to_node += edge.weight;
             }
         }
@@ -127,20 +163,6 @@ impl AreaCollection {
         (a * b) + (c * d)
     }
 
-    fn x_equation(&self, area: &Area) -> f64 {
-        let self_containment = area.self_containment as f64 / area.flow_from_area as f64;
-        let size = area.flow_from_area;
-
-        if ((size > MIN_SIZE) && (self_containment > TARGET_CONTAINMENT))
-            || ((size > TARGET_SIZE) && (self_containment > MIN_CONTAINMENT))
-        {
-            1.0
-        } else {
-            (size - MIN_SIZE) as f64 / (TARGET_SIZE - MIN_SIZE) as f64
-                + (self_containment - MIN_CONTAINMENT) / (TARGET_CONTAINMENT - MIN_CONTAINMENT)
-        }
-    }
-
     pub fn fit(&mut self, max_iter: usize) {
         // Add all nodes to their own area
         for node_id in 0..self.graph.nodes.len() {
@@ -152,35 +174,33 @@ impl AreaCollection {
         let mut iter = 0;
 
         loop {
-            // Find worst x_equation
+            // Find the worst area
             let mut worst_area: Option<Area> = None;
             let mut worst_score = f64::MAX;
 
             for area in self.areas.iter().flatten() {
-                let score = self.x_equation(&area);
-                if score < worst_score {
+                if area.x_score < worst_score {
                     worst_area = Some(area.clone());
-                    worst_score = score;
+                    worst_score = area.x_score;
                 }
             }
 
             // If x_equation for worst area is above threshold, stop
             if worst_score > THRESHOLD {
+                println!("Iteration: {}, worst score {}", iter, worst_score);
+                dbg!(self.areas.iter().flatten().count());
                 break;
             }
             if iter % 1000 == 0 {
                 println!("Iteration: {}, worst score {}", iter, worst_score);
+                dbg!(self.areas.iter().flatten().count());
             }
 
             let worst_area = worst_area.unwrap();
 
             // Remove worst area, capturing its nodes
             let area_nodes = worst_area.node_ids.clone();
-            for area_node in area_nodes.iter() {
-                if let Some(area) = &mut self.areas[worst_area.id] {
-                    area.remove_node(*area_node, &mut self.graph);
-                }
-            }
+            self.remove_area(&worst_area);
 
             // Find the best tij2 for each node
 
@@ -192,21 +212,18 @@ impl AreaCollection {
                 let mut relevant_areas = Vec::new();
                 let node = &self.graph.nodes[*node_idx];
 
-                
-                for edge in node.out_edges.iter().chain(node.in_edges.iter()) {
+                for edge in node.edges.iter() {
                     if self.graph.nodes[edge.target].area_id != usize::MAX {
                         relevant_areas.push(self.graph.nodes[edge.target].area_id);
                     }
-                    
+
                     if self.graph.nodes[edge.source].area_id != usize::MAX {
                         relevant_areas.push(self.graph.nodes[edge.source].area_id);
                     }
-                    
                 }
 
                 relevant_areas.sort_unstable();
                 relevant_areas.dedup();
-                
 
                 // Now, compute the tij2 score only for the relevant areas
                 for area_idx in relevant_areas.iter() {
@@ -222,17 +239,8 @@ impl AreaCollection {
                         .as_mut()
                         .unwrap()
                         .add_node(*node_idx, &mut self.graph);
-
-                    if *best_idx != worst_area.id {
-                        self.remove_area(&worst_area);
-                    }
-                    
                 }
             }
-
-            
-            
-            
 
             iter += 1;
 

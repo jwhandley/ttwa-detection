@@ -3,8 +3,7 @@ pub struct Node {
     pub id: usize,
     pub in_degree: i32,
     pub out_degree: i32,
-    pub out_edges: Vec<Edge>,
-    pub in_edges: Vec<Edge>,
+    pub edges: Vec<Edge>,
     pub area_id: usize,
 }
 
@@ -15,8 +14,7 @@ impl Node {
             id,
             in_degree: 0,
             out_degree: 0,
-            out_edges: Vec::new(),
-            in_edges: Vec::new(),
+            edges: Vec::new(),
             area_id: usize::MAX,
         }
     }
@@ -77,22 +75,9 @@ impl Graph {
         self.nodes[edge.target].in_degree += edge.weight;
 
         // Update edges
-        self.nodes[edge.source].out_edges.push(edge.clone());
-
-        self.nodes[edge.target].in_edges.push(edge.clone());
+        self.nodes[edge.source].edges.push(edge.clone());
+        self.nodes[edge.target].edges.push(edge.clone());
 
         self.edges.push(edge);
-    }
-
-    fn remove_edge(&mut self, edge: Edge) {
-        // Update degrees
-        self.nodes[edge.source].out_degree -= edge.weight;
-        self.nodes[edge.target].in_degree -= edge.weight;
-
-        // Update edges
-        self.nodes[edge.source].out_edges.retain(|e| e != &edge);
-        self.nodes[edge.target].in_edges.retain(|e| e != &edge);
-
-        self.edges.retain(|e| e != &edge);
     }
 }
