@@ -33,8 +33,10 @@ fn main() -> Result<()> {
     ttwa.fit(args.max_iter.unwrap_or(usize::MAX));
 
     // Print the results
-    for area in ttwa.areas.values() {
+    for area in ttwa.areas.iter().flatten() {
+        
         println!("Area {} has {} nodes", area.id, area.node_ids.len());
+        
     }
 
     Ok(())

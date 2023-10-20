@@ -1,5 +1,5 @@
 use crate::graph::{Graph, Node};
-use std::collections::{HashMap,HashSet};
+use std::collections::HashSet;
 const THRESHOLD: f64 = 0.0;
 const MIN_SIZE: i32 = 3500;
 const TARGET_SIZE: i32 = 25000;
@@ -71,47 +71,65 @@ impl Area {
 
 #[derive(Debug)]
 pub struct AreaCollection {
-    pub areas: HashMap<usize, Area>,
+    pub areas: Vec<Option<Area>>,
     graph: Graph,
 }
 
 impl AreaCollection {
     pub fn new(graph: Graph) -> AreaCollection {
         AreaCollection {
-            areas: HashMap::new(),
+            areas: Vec::new(),
             graph,
         }
     }
 
     fn add_area(&mut self, area: Area) {
-        self.areas.insert(area.id, area);
+        self.areas.push(Some(area));
     }
 
     fn remove_area(&mut self, area: &Area) -> Vec<usize> {
-        let area = self.areas.remove(&area.id).unwrap();
-        area.node_ids
+        
+        let nodes = area.node_ids
             .iter()
             .map(|node_id| {
                 self.graph.nodes[*node_id].area_id = None;
                 *node_id
             })
-            .collect()
+            .collect();
+
+        self.areas[area.id] = None;
+        nodes
+
     }
 
-    fn flow_from_node_to_area(&self, node: &Node, area: &Area) -> i32 {
-        node.out_edges
-            .iter()
-            .filter(|&edge| self.graph.nodes[edge.target].area_id == Some(area.id))
-            .map(|edge| edge.weight)
-            .sum()
+    fn combined_flow(&self, node: &Node, area: &Area) -> (i32, i32) {
+        let (mut node_to_area, mut area_to_node) = (0, 0);
+    
+        for edge in node.out_edges.iter().chain(&node.in_edges) {
+            if self.graph.nodes[edge.target].area_id == Some(area.id) {
+                node_to_area += edge.weight;
+            } else if self.graph.nodes[edge.source].area_id == Some(area.id) {
+                area_to_node += edge.weight;
+            }
+        }
+    
+        (node_to_area, area_to_node)
     }
+    
+    
 
-    fn flow_from_area_to_node(&self, area: &Area, node: &Node) -> i32 {
-        node.in_edges
-            .iter()
-            .filter(|&edge| self.graph.nodes[edge.source].area_id == Some(area.id))
-            .map(|edge| edge.weight)
-            .sum()
+    fn tij2(&mut self, node_id: usize, area_id: usize) -> f64 {
+        let area = self.areas[area_id].clone().expect("Area not found");
+        let node = &self.graph.nodes[node_id];
+    
+        let (node_to_area, area_to_node) = self.combined_flow(node, &area);
+
+        let a = node_to_area as f64 / self.graph.nodes[node_id].out_degree as f64;
+        let b = node_to_area as f64 / area.flow_to_area as f64;
+        let c = area_to_node as f64 / area.flow_from_area as f64;
+        let d = area_to_node as f64 / self.graph.nodes[node_id].in_degree as f64;
+
+        (a * b) + (c * d)
     }
 
     fn x_equation(&self, area: &Area) -> f64 {
@@ -128,18 +146,7 @@ impl AreaCollection {
         }
     }
 
-    fn tij2(&mut self, node_id: usize, area_id: usize) -> f64 {
-        let area = self.areas.get(&area_id).unwrap();
-        let node_to_area = self.flow_from_node_to_area(&self.graph.nodes[node_id], area);
-        let area_to_node = self.flow_from_area_to_node(area, &self.graph.nodes[node_id]);
-
-        let a = node_to_area as f64 / self.graph.nodes[node_id].out_degree as f64;
-        let b = node_to_area as f64 / area.flow_to_area as f64;
-        let c = area_to_node as f64 / area.flow_from_area as f64;
-        let d = area_to_node as f64 / self.graph.nodes[node_id].in_degree as f64;
-
-        (a * b) + (c * d)
-    }
+    
 
     pub fn fit(&mut self, max_iter: usize) {
         // Add all nodes to their own area
@@ -153,13 +160,13 @@ impl AreaCollection {
 
         loop {
             // Find worst x_equation
-            let mut worst_area = None;
+            let mut worst_area: Option<Area> = None;
             let mut worst_score = f64::MAX;
 
-            for area in self.areas.values() {
-                let score = self.x_equation(area);
+            for area in self.areas.iter().flatten() {
+                let score = self.x_equation(&area);
                 if score < worst_score {
-                    worst_area = Some(area);
+                    worst_area = Some(area.clone());
                     worst_score = score;
                 }
             }
@@ -172,7 +179,7 @@ impl AreaCollection {
                 println!("Iteration: {}, worst score {}", iter, worst_score);
             }
 
-            let worst_area = worst_area.unwrap().clone();
+            let worst_area = worst_area.unwrap();
 
             // Remove worst area, capturing its nodes
             let area_nodes = self.remove_area(&worst_area);
@@ -206,6 +213,7 @@ impl AreaCollection {
                     }
                 }
 
+
                 // Now, compute the tij2 score only for the relevant areas
                 for area_idx in relevant_areas.iter() {
                     let score = self.tij2(*node_idx, *area_idx);
@@ -216,8 +224,8 @@ impl AreaCollection {
                 }
 
                 if let Some(best_idx) = best_area_index {
-                    self.areas
-                        .get_mut(best_idx)
+                    self.areas[*best_idx]
+                        .as_mut()
                         .unwrap()
                         .add_node(*node_idx, &mut self.graph);
                     
