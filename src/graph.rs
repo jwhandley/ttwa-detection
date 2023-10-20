@@ -7,6 +7,7 @@ pub struct Node {
     pub out_degree: i32,
     pub out_edges: Vec<Edge>,
     pub in_edges: Vec<Edge>,
+    pub area_id: Option<usize>,
 }
 
 #[allow(dead_code)]
@@ -18,6 +19,7 @@ impl Node {
             out_degree: 0,
             out_edges: Vec::new(),
             in_edges: Vec::new(),
+            area_id: None,
         }
     }
 }
@@ -66,7 +68,7 @@ impl Graph {
     }
 
     fn add_node(&mut self, node: &Node) {
-        self.nodes.insert(node.id,node.clone());
+        self.nodes.insert(node.id, node.clone());
     }
 
     fn remove_node(&mut self, node: &Node) {
@@ -74,7 +76,8 @@ impl Graph {
         self.nodes.remove(&node.id);
 
         // Update all edges
-        self.edges.retain(|e| e.source != node.id && e.target != node.id);
+        self.edges
+            .retain(|e| e.source != node.id && e.target != node.id);
     }
 
     fn add_edge(&mut self, edge: Edge) {
@@ -85,12 +88,14 @@ impl Graph {
         self.nodes.get_mut(&edge.target).unwrap().in_degree += edge.weight;
 
         // Update edges
-        self.nodes.get_mut(&edge.source)
+        self.nodes
+            .get_mut(&edge.source)
             .unwrap()
             .out_edges
             .push(edge.clone());
 
-        self.nodes.get_mut(&edge.target)
+        self.nodes
+            .get_mut(&edge.target)
             .unwrap()
             .in_edges
             .push(edge.clone());
@@ -104,11 +109,13 @@ impl Graph {
         self.nodes.get_mut(&edge.target).unwrap().in_degree -= edge.weight;
 
         // Update edges
-        self.nodes.get_mut(&edge.source)
+        self.nodes
+            .get_mut(&edge.source)
             .unwrap()
             .out_edges
             .retain(|e| e != &edge);
-        self.nodes.get_mut(&edge.target)
+        self.nodes
+            .get_mut(&edge.target)
             .unwrap()
             .in_edges
             .retain(|e| e != &edge);

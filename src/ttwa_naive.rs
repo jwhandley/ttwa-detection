@@ -1,4 +1,6 @@
 use crate::graph::{Graph, Node};
+use std::collections::BTreeSet;
+use std::collections::HashMap;
 const THRESHOLD: f64 = 0.0;
 const MIN_SIZE: i32 = 3500;
 const TARGET_SIZE: i32 = 25000;
@@ -7,8 +9,8 @@ const TARGET_CONTAINMENT: f64 = 0.75;
 
 #[derive(PartialEq, Clone, Debug)]
 pub struct Area {
-    id: usize,
-    nodes: Vec<Node>,
+    pub id: usize,
+    pub node_ids: BTreeSet<usize>,
     flow_to_area: i32,
     flow_from_area: i32,
     self_containment: i32,
@@ -19,81 +21,85 @@ impl Area {
     fn new(id: usize) -> Area {
         Area {
             id,
-            nodes: Vec::new(),
+            node_ids: BTreeSet::new(),
             flow_to_area: 0,
             flow_from_area: 0,
             self_containment: 0,
         }
     }
 
-    fn add_node(&mut self, node: &Node) {
+    fn add_node(&mut self, node_id: usize, graph: &mut Graph) {
+        let node = graph.nodes.get_mut(&node_id).unwrap();
+        node.area_id = Some(self.id);
         self.flow_to_area += node.in_degree;
         self.flow_from_area += node.out_degree;
         self.self_containment += node
             .out_edges
             .iter()
             .filter_map(|e| {
-                if self.nodes.iter().any(|n| n.id == e.target) {
+                if self.node_ids.iter().any(|n| n == &e.target) {
                     Some(e.weight)
                 } else {
                     None
                 }
             })
             .sum::<i32>();
-        // TODO: avoid cloning here
-        self.nodes.push(node.clone());
+        self.node_ids.insert(node.id);
+        
     }
 
-    fn remove_node(&mut self, node: &Node) {
-        // Maybe make this return Option<Node>?
-        if self.nodes.contains(node) {
-            self.nodes.retain(|n| n != node);
+    fn remove_node(&mut self, node_id: usize, graph: &mut Graph) {
+        let node = graph.nodes.get_mut(&node_id).unwrap();
+        if self.node_ids.remove(&node_id) {
             self.flow_to_area -= node.in_degree;
             self.flow_from_area -= node.out_degree;
             self.self_containment -= node
                 .out_edges
                 .iter()
                 .filter_map(|e| {
-                    if self.nodes.iter().any(|n| n.id == e.target) {
+                    if self.node_ids.iter().any(|n| n == &e.target) {
                         Some(e.weight)
                     } else {
                         None
                     }
                 })
                 .sum::<i32>();
+
+            node.area_id = None;
         };
     }
 }
 
-
-
 #[derive(Debug)]
 pub struct AreaCollection {
-    pub areas: Vec<Area>,
+    pub areas: HashMap<usize, Area>,
     graph: Graph,
 }
 
 impl AreaCollection {
     pub fn new(graph: Graph) -> AreaCollection {
         AreaCollection {
-            areas: Vec::new(),
+            areas: HashMap::new(),
             graph,
         }
     }
 
     fn add_area(&mut self, area: Area) {
-        self.areas.push(area);
+        self.areas.insert(area.id, area);
     }
 
-    fn remove_area(&mut self, area: &Area) -> Vec<Node> {
-        self.areas.retain(|a| a != area);
-        area.nodes.clone()
+    fn remove_area(&mut self, area: &Area) -> Vec<usize> {
+        let area = self.areas.remove(&area.id).unwrap();
+        area.node_ids.iter().map(|node_id| {
+            self.graph.nodes.get_mut(node_id).unwrap().area_id = None;
+            *node_id
+        }).collect()
     }
 
     fn flow_from_node_to_area(&self, node: &Node, area: &Area) -> i32 {
         node.out_edges
             .iter()
-            .filter(|&edge| area.nodes.iter().any(|n| n.id == edge.target))
+            .filter(|&edge| self.graph.nodes[&edge.target].area_id == Some(area.id))
             .map(|edge| edge.weight)
             .sum()
     }
@@ -101,7 +107,7 @@ impl AreaCollection {
     fn flow_from_area_to_node(&self, area: &Area, node: &Node) -> i32 {
         node.in_edges
             .iter()
-            .filter(|&edge| area.nodes.iter().any(|n| n.id == edge.source))
+            .filter(|&edge| self.graph.nodes[&edge.source].area_id == Some(area.id))
             .map(|edge| edge.weight)
             .sum()
     }
@@ -134,10 +140,9 @@ impl AreaCollection {
 
     pub fn fit(&mut self, max_iter: usize) {
         // Add all nodes to their own area
-        let nodes_clone = self.graph.nodes.clone();
-        for node in nodes_clone.values() {
-            let mut area = Area::new(self.areas.len());
-            area.add_node(node);
+        for node_id in 0..self.graph.nodes.len() {
+            let mut area = Area::new(node_id);
+            area.add_node(node_id, &mut self.graph);
             self.add_area(area);
         }
 
@@ -148,7 +153,7 @@ impl AreaCollection {
             let mut worst_area = None;
             let mut worst_score = f64::MAX;
 
-            for area in self.areas.iter() {
+            for area in self.areas.values() {
                 let score = self.x_equation(area);
                 if score < worst_score {
                     worst_area = Some(area);
@@ -165,23 +170,49 @@ impl AreaCollection {
             }
 
             let worst_area = worst_area.unwrap().clone();
+            
 
             // Remove worst area, capturing its nodes
             let area_nodes = self.remove_area(&worst_area);
 
             // Find the best tij2 for each node
 
-            for node in area_nodes.iter() {
+            for node_idx in area_nodes.iter() {
                 let mut best_area_index = None;
                 let mut best_score = f64::MIN;
-                for i in 0..self.areas.len() {
-                    let score = self.tij2(node, &self.areas[i]);
+
+                // Find relevant areas, i.e. areas whose nodes are connected to this node
+                let mut relevant_areas = BTreeSet::new();
+
+                for edge in self.graph.nodes[node_idx].out_edges.iter() {
+                    if let Some(area_id) = self.graph.nodes[&edge.target].area_id {
+                        if area_id != worst_area.id {
+                            relevant_areas.insert(area_id);
+                        }
+                    }
+                }
+
+                for edge in self.graph.nodes[node_idx].in_edges.iter() {
+                    if let Some(area_id) = self.graph.nodes[&edge.source].area_id {
+                        if area_id != worst_area.id {
+                            relevant_areas.insert(area_id);
+                        }
+                    }
+                }
+
+                // Now, compute the tij2 score only for the relevant areas
+                for area_idx in relevant_areas.iter() {
+                    
+                    let score = self.tij2(&self.graph.nodes[node_idx], self.areas.get(area_idx).expect("Could not find area"));
                     if score > best_score {
-                        best_area_index = Some(i);
+                        best_area_index = Some(area_idx);
                         best_score = score;
                     }
                 }
-                self.areas[best_area_index.unwrap()].add_node(node);
+
+                if let Some(best_idx) = best_area_index {
+                    self.areas.get_mut(best_idx).unwrap().add_node(*node_idx, &mut self.graph);
+                }
             }
 
             iter += 1;

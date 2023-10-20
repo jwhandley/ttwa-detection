@@ -1,7 +1,7 @@
 use anyhow::Result;
 use std::path::Path;
-mod io;
 mod graph;
+mod io;
 mod ttwa_naive;
 use clap::Parser;
 
@@ -33,7 +33,9 @@ fn main() -> Result<()> {
     ttwa.fit(args.max_iter.unwrap_or(usize::MAX));
 
     // Print the results
-    println!("TTWAs:\n {:?}", ttwa.areas.len());
+    for area in ttwa.areas.values() {
+        println!("Area {} has {} nodes", area.id, area.node_ids.len());
+    }
 
     Ok(())
 }
