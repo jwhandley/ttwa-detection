@@ -5,7 +5,7 @@ pub struct Node {
     pub out_degree: i32,
     pub out_edges: Vec<Edge>,
     pub in_edges: Vec<Edge>,
-    pub area_id: Option<usize>,
+    pub area_id: usize,
 }
 
 #[allow(dead_code)]
@@ -17,7 +17,7 @@ impl Node {
             out_degree: 0,
             out_edges: Vec::new(),
             in_edges: Vec::new(),
-            area_id: None,
+            area_id: usize::MAX,
         }
     }
 }

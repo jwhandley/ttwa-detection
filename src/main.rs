@@ -34,9 +34,7 @@ fn main() -> Result<()> {
 
     // Print the results
     for area in ttwa.areas.iter().flatten() {
-        
         println!("Area {} has {} nodes", area.id, area.node_ids.len());
-        
     }
 
     Ok(())

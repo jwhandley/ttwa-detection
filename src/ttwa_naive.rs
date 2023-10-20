@@ -28,7 +28,7 @@ impl Area {
     }
 
     fn add_node(&mut self, node_id: usize, graph: &mut Graph) {
-        graph.nodes[node_id].area_id = Some(self.id);
+        graph.nodes[node_id].area_id = self.id;
         let node = &graph.nodes[node_id];
         self.flow_to_area += node.in_degree;
         self.flow_from_area += node.out_degree;
@@ -64,7 +64,7 @@ impl Area {
                 })
                 .sum::<i32>();
 
-            graph.nodes[node_id].area_id = None;
+            graph.nodes[node_id].area_id = usize::MAX;
         };
     }
 }
@@ -88,40 +88,42 @@ impl AreaCollection {
     }
 
     fn remove_area(&mut self, area: &Area) -> Vec<usize> {
-        
-        let nodes = area.node_ids
+        let nodes = area
+            .node_ids
             .iter()
             .map(|node_id| {
-                self.graph.nodes[*node_id].area_id = None;
+                self.graph.nodes[*node_id].area_id = usize::MAX;
                 *node_id
             })
             .collect();
 
         self.areas[area.id] = None;
         nodes
-
     }
 
     fn combined_flow(&self, node: &Node, area: &Area) -> (i32, i32) {
-        let (mut node_to_area, mut area_to_node) = (0, 0);
-    
-        for edge in node.out_edges.iter().chain(&node.in_edges) {
-            if self.graph.nodes[edge.target].area_id == Some(area.id) {
+        let mut node_to_area = 0;
+        let mut area_to_node = 0;
+
+        for edge in &node.out_edges {
+            if self.graph.nodes[edge.target].area_id == area.id {
                 node_to_area += edge.weight;
-            } else if self.graph.nodes[edge.source].area_id == Some(area.id) {
+            }
+        }
+
+        for edge in &node.in_edges {
+            if self.graph.nodes[edge.source].area_id == area.id {
                 area_to_node += edge.weight;
             }
         }
-    
+
         (node_to_area, area_to_node)
     }
-    
-    
 
     fn tij2(&mut self, node_id: usize, area_id: usize) -> f64 {
         let area = self.areas[area_id].clone().expect("Area not found");
         let node = &self.graph.nodes[node_id];
-    
+
         let (node_to_area, area_to_node) = self.combined_flow(node, &area);
 
         let a = node_to_area as f64 / self.graph.nodes[node_id].out_degree as f64;
@@ -145,8 +147,6 @@ impl AreaCollection {
                 + (self_containment - MIN_CONTAINMENT) / (TARGET_CONTAINMENT - MIN_CONTAINMENT)
         }
     }
-
-    
 
     pub fn fit(&mut self, max_iter: usize) {
         // Add all nodes to their own area
@@ -187,32 +187,18 @@ impl AreaCollection {
             // Find the best tij2 for each node
 
             for node_idx in area_nodes.iter() {
-                
-
                 let mut best_area_index = None;
                 let mut best_score = f64::MIN;
 
                 // Find relevant areas, i.e. areas whose nodes are connected to this node
                 let mut relevant_areas = HashSet::new();
+                let node = &self.graph.nodes[*node_idx];
 
-                for edge in self.graph.nodes[*node_idx].out_edges.iter() {
-                    if let Some(area_id) = self.graph.nodes[edge.target].area_id {
-                        if area_id != worst_area.id {
-                            relevant_areas.insert(area_id);
-                
-                        }
+                if node.area_id != worst_area.id && node.area_id != usize::MAX {
+                    for _ in node.out_edges.iter().chain(node.in_edges.iter()) {
+                        relevant_areas.insert(node.area_id);
                     }
                 }
-
-                for edge in self.graph.nodes[*node_idx].in_edges.iter() {
-                    if let Some(area_id) = self.graph.nodes[edge.source].area_id {
-                        if area_id != worst_area.id {
-                            relevant_areas.insert(area_id);
-                
-                        }
-                    }
-                }
-
 
                 // Now, compute the tij2 score only for the relevant areas
                 for area_idx in relevant_areas.iter() {
@@ -228,7 +214,6 @@ impl AreaCollection {
                         .as_mut()
                         .unwrap()
                         .add_node(*node_idx, &mut self.graph);
-                    
                 }
             }
 
