@@ -3,8 +3,7 @@
 This crate aims to replicate the travel to work area algorithm used by the ONS to identifying labour market areas in the UK using commute matrices from the census.
 The methodology is explained in detail [here](https://www.ncl.ac.uk/media/wwwnclacuk/curds/files/TTWA%20report.pdf).
 This is for the most part a carbon copy of the methodology, except the document never outlines exactly what the 'X' equation is.
-Consequently, I've assumed that the score is 1.0 if either the population is above the minimum (3,500) and the self-containment is above the target (0.75) or the population is above the target (25,000) and the self-containment is above the minimum (0.667).
-If it fails both of these tests, the the score is calculated such that it will be equal to 0.0 if the population is 3,500 and the self-containment is 0.75 and if the population is 25,000 and the self-containment is 0.667, with a linear trade-off in between.
+The methodology shows a piecewise-linear indifference curve, but I have be experimenting with approximating it with a Cobb-Douglas utility function. The results don't match with the original methodology perfectly, so this is still a work in progress.
 I have also chosen to make a small tweak to the way it determines the best new TTWA for an area to move. Instead of checking every single TTWA, it only looks at neighboring ones. This has efficiency benefits but also has conceptual ones -- TTWAs should be fully contiguous.
 
 ## Usage

@@ -1,9 +1,9 @@
 use crate::graph::{Graph, Node};
-const THRESHOLD: f64 = 0.0;
-const MIN_SIZE: i32 = 3500;
-const TARGET_SIZE: i32 = 25000;
-const MIN_CONTAINMENT: f64 = 0.667;
-const TARGET_CONTAINMENT: f64 = 0.75;
+// const THRESHOLD: f64 = 1.0;
+// const MIN_SIZE: i32 = 3500;
+// const TARGET_SIZE: i32 = 25000;
+// const MIN_CONTAINMENT: f64 = 0.667;
+// const TARGET_CONTAINMENT: f64 = 0.75;
 
 #[derive(PartialEq, Clone, Debug)]
 pub struct Area {
@@ -93,18 +93,7 @@ impl Area {
     }
 
     fn x_equation(&self) -> f64 {
-        let self_containment = self.self_containment as f64 / self.flow_from_area as f64;
-
-        let size = self.flow_from_area;
-
-        if (size > MIN_SIZE) && (self_containment > TARGET_CONTAINMENT) {
-            1.0
-        } else if (size > TARGET_SIZE) && (self_containment > MIN_CONTAINMENT) {
-            1.0
-        } else {
-            (size - MIN_SIZE) as f64 / (TARGET_SIZE - MIN_SIZE) as f64
-                + (self_containment - MIN_CONTAINMENT) / (TARGET_CONTAINMENT - MIN_CONTAINMENT)
-        }
+        0.25*(0.667*self.flow_to_area as f64).ln() + 0.75*(self.self_containment as f64).ln() - 10.0
     }
 }
 
@@ -186,7 +175,7 @@ impl AreaCollection {
             }
 
             // If x_equation for worst area is above threshold, stop
-            if worst_score > THRESHOLD {
+            if self.areas.iter().flatten().count() <= 170 {
                 println!("Iteration: {}, worst score {}", iter, worst_score);
                 dbg!(self.areas.iter().flatten().count());
                 break;
