@@ -32,10 +32,10 @@ fn main() -> Result<()> {
         for node in area.node_ids.iter() {
             node_to_area.insert(*node, area.id);
         }
-        println!(
-            "Area {} has {} self containment, {} population, {} workforce",
-            codes[area.id], area.self_containment, area.flow_from_area, area.flow_to_area
-        );
+        // println!(
+        //     "Area {} has {} self containment, {} population, {} workforce",
+        //     codes[area.id], area.self_containment, area.flow_from_area, area.flow_to_area
+        // );
     }
 
     // Write the results to a file

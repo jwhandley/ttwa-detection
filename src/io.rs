@@ -10,8 +10,8 @@ pub fn read_adjacency_matrix_to_graph(path: &Path) -> Result<(Vec<String>, Graph
         let record = result?;
         let code = record.get(0).unwrap().to_owned();
         codes.push(code);
-        let row: Result<Vec<i32>, _> = (1..record.len())
-            .map(|i| record.get(i).unwrap().parse::<i32>())
+        let row: Result<Vec<u32>, _> = (1..record.len())
+            .map(|i| record.get(i).unwrap().parse::<u32>())
             .collect();
         adjacency_matrix.push(row?);
     }
