@@ -18,4 +18,4 @@ The ONS has provided travel to work matrices based on the 2021 England and Wales
 
 ## Map of TTWAs using 2021 pre-coronavirus commute matrix
 
-![Map screenshot](plots/self_containment_map.png)
+![Map screenshot](plots/self_containment_map_v2.png)
