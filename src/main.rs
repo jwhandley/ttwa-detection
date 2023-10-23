@@ -25,22 +25,38 @@ fn main() -> Result<()> {
     let mut ttwa = ttwa_naive::AreaCollection::new(graph);
     ttwa.fit(args.max_iter.unwrap_or(usize::MAX));
 
-    let mut node_to_area: HashMap<usize, usize> = HashMap::new();
+    let mut nodes = Vec::new();
+    let mut areas = Vec::new();
 
     // Print the results
     for area in ttwa.areas.iter().flatten() {
         for node in area.node_ids.iter() {
-            node_to_area.insert(*node, area.id);
+            nodes.push(*node);
+            areas.push(area.id);
         }
         // println!(
         //     "Area {} has {} self containment, {} population, {} workforce",
         //     codes[area.id], area.self_containment, area.flow_from_area, area.flow_to_area
         // );
     }
-
+    let area_metadata = ttwa
+        .areas
+        .iter()
+        .flatten()
+        .map(|area| {
+            (
+                area.id,
+                [
+                    area.self_containment,
+                    area.flow_from_area,
+                    area.flow_to_area,
+                ],
+            )
+        })
+        .collect::<HashMap<usize, [u32; 3]>>();
     // Write the results to a file
     if let Some(output) = args.output {
-        io::write_nodes_to_areas(Path::new(&output), &codes, &node_to_area)?;
+        io::write_nodes_to_areas(Path::new(&output), &codes, &nodes, &areas, &area_metadata)?;
     }
 
     Ok(())

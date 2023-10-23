@@ -39,11 +39,19 @@ impl Area {
 
         self.flow_from_area += graph.nodes[node_id].out_degree;
 
-        self.self_containment += graph
-            .get_edges(node_id, EdgeDirection::Undirected)
-            .filter(|&e| self.node_ids.contains(&e.source) && self.node_ids.contains(&e.target))
+        let a = graph
+            .get_edges(node_id, EdgeDirection::Out)
+            .filter(|&e| self.node_ids.contains(&e.target))
             .map(|edge| edge.weight)
             .sum::<u32>();
+
+        let b = graph
+            .get_edges(node_id, EdgeDirection::In)
+            .filter(|&e| self.node_ids.contains(&e.source) && e.source != e.target)
+            .map(|edge| edge.weight)
+            .sum::<u32>();
+
+        self.self_containment += a + b;
 
         // dbg!(
         //     self.flow_to_area,
@@ -60,20 +68,33 @@ impl Area {
         self.flow_to_area -= graph.nodes[node_id].in_degree;
         self.flow_from_area -= graph.nodes[node_id].out_degree;
 
-        self.self_containment -= graph
-            .get_edges(node_id, EdgeDirection::Undirected)
-            .filter(|&e| self.node_ids.contains(&e.source) && self.node_ids.contains(&e.target))
+        // All out edges where the target is in the area (including self-loops)
+        let a = graph
+            .get_edges(node_id, EdgeDirection::Out)
+            .filter(|&e| self.node_ids.contains(&e.target))
             .map(|edge| edge.weight)
             .sum::<u32>();
+
+        // All in edges where the source is in the area (excluding self-loops)
+        let b = graph
+            .get_edges(node_id, EdgeDirection::In)
+            .filter(|&e| self.node_ids.contains(&e.source) && e.source != e.target)
+            .map(|edge| edge.weight)
+            .sum::<u32>();
+
+        self.self_containment -= a + b;
     }
 
     fn x_equation(&self) -> f64 {
         let size = self.flow_from_area as f64;
-        // let self_containment = 0.5 * (self.self_containment as f64 / self.flow_to_area as f64)
-        //     + 0.5 * (self.self_containment as f64 / self.flow_from_area as f64);
+        assert!(self.self_containment <= self.flow_to_area);
+        assert!(self.self_containment <= self.flow_from_area);
 
-        // let self_containment = self.self_containment as f64 / self.flow_to_area as f64;
-        let self_containment = self.self_containment as f64 / self.flow_from_area as f64;
+        // dbg!(self.flow_to_area, self.flow_from_area, self.self_containment);
+
+        let demand_self_containment = self.self_containment as f64 / self.flow_to_area as f64;
+        let supply_self_containment = self.self_containment as f64 / self.flow_from_area as f64;
+        let self_containment = demand_self_containment.max(supply_self_containment);
 
         if size >= TARGET_SIZE && self_containment >= TARGET_CONTAINMENT {
             1.0 / 12.0
@@ -138,15 +159,11 @@ impl AreaCollection {
     }
 
     fn flow_from_area_to_node(&mut self, node_id: usize, area_id: usize) -> u32 {
-        // Get from cache if in cache, else recalculate
-        
-            self
-                .graph
-                .get_edges(node_id, EdgeDirection::In)
-                .filter(|&e| self.node_to_area[e.source] == area_id)
-                .map(|edge| edge.weight)
-                .sum::<u32>()
-        
+        self.graph
+            .get_edges(node_id, EdgeDirection::In)
+            .filter(|&e| self.node_to_area[e.source] == area_id)
+            .map(|edge| edge.weight)
+            .sum::<u32>()
     }
 
     fn tij2(&mut self, node_id: usize, area_id: usize) -> f64 {
@@ -186,13 +203,21 @@ impl AreaCollection {
 
             // If x_equation for worst area is above threshold, stop
             if worst_score >= THRESHOLD {
-                println!("Iteration: {}, worst score {}", iter, worst_score);
-                dbg!(self.areas.iter().flatten().count());
+                println!(
+                    "Iteration: {}, worst score {:.03}, {} areas remaining",
+                    iter,
+                    worst_score,
+                    self.areas.iter().flatten().count()
+                );
                 break;
             }
             if iter % 1000 == 0 {
-                println!("Iteration: {}, worst score {}", iter, worst_score);
-                dbg!(self.areas.iter().flatten().count());
+                println!(
+                    "Iteration: {}, worst score {:.03}, {} areas remaining",
+                    iter,
+                    worst_score,
+                    self.areas.iter().flatten().count()
+                );
             }
 
             let worst_area_index = worst_area.unwrap();
@@ -233,13 +258,11 @@ impl AreaCollection {
                     }
                 }
 
-                // dbg!(best_tij2, best_area_index, worst_area.id, node_idx);
+                // dbg!(best_tij2, best_area_index, worst_area_index, node_idx);
                 let best_area_idx = best_area_index.unwrap();
 
                 // println!("Inserting node {} into area {} after removing area {}", node_idx, best_area_idx, worst_area.id);
                 self.add_node_to_area(*node_idx, *best_area_idx);
-
-                
             }
 
             iter += 1;

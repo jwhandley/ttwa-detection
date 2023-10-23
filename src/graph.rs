@@ -34,7 +34,6 @@ pub struct Graph {
 pub enum EdgeDirection {
     In,
     Out,
-    Undirected,
 }
 
 #[allow(dead_code)]
@@ -136,19 +135,6 @@ impl Graph {
                     .iter()
                     .map(move |&i| &self.edges[i]),
             ),
-            EdgeDirection::Undirected => {
-                let in_edges = self.node_to_in_edges[node_index]
-                    .iter()
-                    .map(move |&i| &self.edges[i])
-                    .collect::<Vec<_>>();
-
-                let out_edges = self.node_to_out_edges[node_index]
-                    .iter()
-                    .map(move |&i| &self.edges[i])
-                    .collect::<Vec<_>>();
-
-                Box::new(in_edges.into_iter().chain(out_edges))
-            }
         }
     }
 }

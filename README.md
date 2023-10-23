@@ -1,7 +1,7 @@
 ## Travel to work area algorithm in Rust
 
 This crate aims to replicate the travel to work area algorithm used by the ONS to identifying labour market areas in the UK using commute matrices from the census.
-The methodology is explained in detail [here](https://www.ncl.ac.uk/media/wwwnclacuk/curds/files/TTWA%20report.pdf).
+The methodology is explained in detail [here](https://www.ncl.ac.uk/media/wwwnclacuk/curds/files/TTWA%20report.pdf). This is for the most part a carbon copy of the metholodogy, but there are some points that are left unclear -- like which of the two provided definitions of self-containment are used in the 'X' equation that determines which proto-TTWA to eliminate next. I have experimented with several ways of combining the two into a single score.
 
 ## Usage
 
