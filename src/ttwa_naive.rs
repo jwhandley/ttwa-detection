@@ -39,12 +39,14 @@ impl Area {
 
         self.flow_from_area += graph.nodes[node_id].out_degree;
 
+        // All out edges where the target is in the area (including self-loops)
         let a = graph
             .get_edges(node_id, EdgeDirection::Out)
             .filter(|&e| self.node_ids.contains(&e.target))
             .map(|edge| edge.weight)
             .sum::<u32>();
 
+        // All in edges where the source is in the area (excluding self-loops)
         let b = graph
             .get_edges(node_id, EdgeDirection::In)
             .filter(|&e| self.node_ids.contains(&e.source) && e.source != e.target)
@@ -225,29 +227,29 @@ impl AreaCollection {
             let area_nodes = self.remove_area(worst_area_index);
 
             // Find the best tij2 for each node
-            let relevant_areas: Vec<usize> = self.areas.iter().flatten().map(|a| a.id).collect();
+            // let relevant_areas: Vec<usize> = self.areas.iter().flatten().map(|a| a.id).collect();
             for node_idx in area_nodes.iter() {
                 let mut best_area_index = None;
                 let mut best_tij2 = f64::MIN;
 
                 // Find relevant areas, i.e. areas whose nodes are connected to this node
-                // let mut relevant_areas: HashSet<usize> = HashSet::new();
+                let mut relevant_areas: HashSet<usize> = HashSet::new();
 
-                // // Loop over in edges
-                // for edge in self.graph.get_edges(*node_idx, EdgeDirection::In) {
-                //     let source_area = self.node_to_area[edge.source];
-                //     if source_area != worst_area_index && source_area != usize::MAX {
-                //         relevant_areas.insert(source_area);
-                //     }
-                // }
+                // Loop over in edges
+                for edge in self.graph.get_edges(*node_idx, EdgeDirection::In) {
+                    let source_area = self.node_to_area[edge.source];
+                    if source_area != worst_area_index && source_area != usize::MAX {
+                        relevant_areas.insert(source_area);
+                    }
+                }
 
-                // // Loop over out edges
-                // for edge in self.graph.get_edges(*node_idx, EdgeDirection::Out) {
-                //     let target_area = self.node_to_area[edge.target];
-                //     if target_area != worst_area_index && target_area != usize::MAX {
-                //         relevant_areas.insert(target_area);
-                //     }
-                // }
+                // Loop over out edges
+                for edge in self.graph.get_edges(*node_idx, EdgeDirection::Out) {
+                    let target_area = self.node_to_area[edge.target];
+                    if target_area != worst_area_index && target_area != usize::MAX {
+                        relevant_areas.insert(target_area);
+                    }
+                }
 
                 // Now, compute the tij2 score only for the relevant areas
                 for area_idx in relevant_areas.iter() {
