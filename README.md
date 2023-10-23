@@ -16,6 +16,8 @@ This will create a new CSV with the specified file name where each row contains 
 
 The ONS has provided travel to work matrices based on the 2021 England and Wales Census that can be used with this program [here](https://www.ons.gov.uk/releases/estimationoftraveltoworkmatricesenglandandwales).
 
-## Map of TTWAs using 2021 pre-coronavirus commute matrix
+## Map of TTWAs
+
+Below is a map of the TTWAs identified by the algorithm for the ONS travel to work matrices from the 2021 England and Wales census (using estimated pre-coronavirus travel patterns). The colors indicate the supply-side self-containment (yellow is high, blue is low). TTWAs that people tend to commute to have higher self-containment and TTWAs that people tend to commute from have lower self-containment.
 
 ![Map screenshot](plots/self_containment_map_v2.png)
