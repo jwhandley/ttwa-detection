@@ -16,6 +16,6 @@ This will create a new CSV with the specified file name where each row contains 
 
 The ONS has provided travel to work matrices based on the 2021 England and Wales Census that can be used with this program [here](https://www.ons.gov.uk/releases/estimationoftraveltoworkmatricesenglandandwales).
 
-## Interactive map
+## Map of TTWAs using 2021 pre-coronavirus commute matrix
 
-<iframe src="notebooks/self_containment.html" width="100%" height="400"></iframe>
+![Map screenshot](plots/self_containment_map.png)
