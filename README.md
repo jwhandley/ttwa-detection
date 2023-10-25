@@ -1,7 +1,7 @@
 ## Travel to work area algorithm in Rust
 
 This crate aims to replicate the travel to work area algorithm used by the ONS to identifying labour market areas in the UK using commute matrices from the census.
-The methodology is explained in detail [here](https://www.ncl.ac.uk/media/wwwnclacuk/curds/files/TTWA%20report.pdf). This is for the most part a carbon copy of the metholodogy, but there are some points that are left unclear -- like which of the two provided definitions of self-containment are used in the 'X' equation that determines which proto-TTWA to eliminate next. I have experimented with several ways of combining the two into a single score.
+The methodology is explained in detail [here](https://www.ncl.ac.uk/media/wwwnclacuk/curds/files/TTWA%20report.pdf). This is for the most part a carbon copy of the metholodogy, but there are some points that are left unclear -- like which of the two provided definitions of self-containment are used in the 'X' equation that determines which proto-TTWA to eliminate next. I have experimented with several ways of combining the two into a single score. I have also reduced the search space in each iteration to only include the neighbors of a given node. This drastically increases the speed without making a considerable difference to the final result. In future I may add an option to disable this feature on a case by case basis.
 
 ## Usage
 
@@ -9,7 +9,7 @@ The code takes a CSV where rows represent origin locations and columns represent
 You need to have Rust and cargo installed to run it, but you can do so simply by typing
 
 ```bash
-cargo run --release path/to/your/file.csv path/to/result/file.csv
+cargo run --release path/to/your/file.csv [path/to/result/file.csv] [maximum_iterations]
 ```
 
 This will create a new CSV with the specified file name where each row contains a location and the TTWA it belongs to. The TTWA codes are equal to the code of the first area that was part of them. This essentially allows us to identify the most "central" location within the TTWA.
