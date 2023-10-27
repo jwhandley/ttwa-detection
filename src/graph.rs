@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 #[derive(PartialEq, Eq, Hash, Clone, Debug)]
 pub struct Node {
     pub id: usize,
@@ -26,9 +28,9 @@ pub struct Edge {
 #[derive(Debug)]
 pub struct Graph {
     pub nodes: Vec<Node>,
-    pub edges: Vec<Edge>,
-    node_to_in_edges: Vec<Vec<usize>>,
-    node_to_out_edges: Vec<Vec<usize>>,
+    pub edges: Vec<Rc<Edge>>,
+    node_to_in_edges: Vec<Vec<Rc<Edge>>>,
+    node_to_out_edges: Vec<Vec<Rc<Edge>>>,
 }
 
 pub enum EdgeDirection {
@@ -107,6 +109,7 @@ impl Graph {
     }
 
     fn add_edge(&mut self, edge: Edge) {
+        let edge = Rc::new(edge);
         // Update degrees
         // This won't work if we've removed nodes
         let target = edge.target;
@@ -114,27 +117,25 @@ impl Graph {
         self.nodes[source].out_degree += edge.weight;
         self.nodes[target].in_degree += edge.weight;
 
-        self.edges.push(edge);
-        self.node_to_in_edges[target].push(self.edges.len() - 1);
-        self.node_to_out_edges[source].push(self.edges.len() - 1);
+        self.edges.push(edge.clone());
+        self.node_to_in_edges[target].push(edge.clone());
+        self.node_to_out_edges[source].push(edge.clone());
     }
 
-    pub fn get_edges<'a>(
-        &'a self,
+    pub fn get_edges(
+        &self,
         node_index: usize,
         direction: EdgeDirection,
-    ) -> Box<dyn Iterator<Item = &'a Edge> + 'a> {
+    ) -> impl Iterator<Item = &'_ Rc<Edge>> {
         match direction {
-            EdgeDirection::In => Box::new(
+            EdgeDirection::In => 
                 self.node_to_in_edges[node_index]
                     .iter()
-                    .map(move |&i| &self.edges[i]),
-            ),
-            EdgeDirection::Out => Box::new(
+            ,
+            EdgeDirection::Out => 
                 self.node_to_out_edges[node_index]
                     .iter()
-                    .map(move |&i| &self.edges[i]),
-            ),
+            ,
         }
     }
 }
