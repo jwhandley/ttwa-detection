@@ -10,6 +10,7 @@ anyhow = "1.0.75"
 clap = { version = "4.4.3", features = ["derive"] }
 csv = "1.2.2"
 ndarray = "0.15.6"
+rustc-hash = "1.1.0"
 
 [profile.release]
 debug = true

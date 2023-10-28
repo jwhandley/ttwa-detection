@@ -25,7 +25,7 @@ pub fn write_nodes_to_areas(
     codes: &[String],
     nodes: &[usize],
     areas: &[usize],
-    area_metadata: &HashMap<usize, [u32; 3]>,
+    area_metadata: &HashMap<usize, [f64; 3]>,
 ) -> Result<()> {
     let mut writer = csv::Writer::from_path(path)?;
     writer.write_record([

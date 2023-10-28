@@ -12,7 +12,7 @@ You need to have Rust and cargo installed to run it, but you can do so simply by
 cargo run --release path/to/your/file.csv [path/to/result/file.csv] [maximum_iterations]
 ```
 
-This will create a new CSV with the specified file name where each row contains a location and the TTWA it belongs to. The TTWA codes are equal to the code of the first area that was part of them. This essentially allows us to identify the most "central" location within the TTWA.
+This will create a new CSV with the specified file name where each row contains a location and the TTWA it belongs to, represented by an integer ranging from 0 to the number of TTWAs - 1.
 
 The ONS has provided travel to work matrices based on the 2021 England and Wales Census that can be used with this program [here](https://www.ons.gov.uk/releases/estimationoftraveltoworkmatricesenglandandwales).
 

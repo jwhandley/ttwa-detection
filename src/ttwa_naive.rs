@@ -96,7 +96,7 @@ impl Area {
 
         let demand_self_containment = self.self_containment as f64 / self.flow_to_area as f64;
         let supply_self_containment = self.self_containment as f64 / self.flow_from_area as f64;
-        let self_containment = demand_self_containment.max(supply_self_containment);
+        let self_containment = demand_self_containment.min(supply_self_containment);
 
         if size >= TARGET_SIZE && self_containment >= TARGET_CONTAINMENT {
             1.0 / 12.0

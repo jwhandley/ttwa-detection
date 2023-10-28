@@ -102,6 +102,14 @@ impl Graph {
         graph
     }
 
+    pub fn in_degrees(&self) -> Vec<u32> {
+        self.nodes.iter().map(|node| node.in_degree).collect()
+    }
+
+    pub fn out_degrees(&self) -> Vec<u32> {
+        self.nodes.iter().map(|node| node.out_degree).collect()
+    }
+
     fn add_node(&mut self, node: Node) {
         self.nodes.insert(node.id, node);
         self.node_to_in_edges.push(Vec::new());
@@ -128,14 +136,8 @@ impl Graph {
         direction: EdgeDirection,
     ) -> impl Iterator<Item = &'_ Rc<Edge>> {
         match direction {
-            EdgeDirection::In => 
-                self.node_to_in_edges[node_index]
-                    .iter()
-            ,
-            EdgeDirection::Out => 
-                self.node_to_out_edges[node_index]
-                    .iter()
-            ,
+            EdgeDirection::In => self.node_to_in_edges[node_index].iter(),
+            EdgeDirection::Out => self.node_to_out_edges[node_index].iter(),
         }
     }
 }

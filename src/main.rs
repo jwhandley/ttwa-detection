@@ -2,7 +2,8 @@ use anyhow::Result;
 use std::path::Path;
 mod graph;
 mod io;
-mod ttwa_naive;
+// mod ttwa_naive;
+mod ttwa_v2;
 use clap::Parser;
 use std::collections::HashMap;
 
@@ -21,31 +22,29 @@ fn main() -> Result<()> {
 
     let (codes, graph) = read_adjacency_matrix_to_graph(Path::new(&path))?;
 
-    // Create a TTWA structure
-    let mut ttwa = ttwa_naive::AreaCollection::new(graph);
-    ttwa.fit(args.max_iter.unwrap_or(usize::MAX));
+    let ttwas = ttwa_v2::travel_to_work_areas(&graph);
+    println!("Found {} TTWAs", ttwas.len());
 
     let mut nodes = Vec::new();
     let mut areas = Vec::new();
 
     // Print the results
-    for area in ttwa.areas.iter().flatten() {
-        for node in area.node_ids.iter() {
+    for (area_id, area) in ttwas.iter().enumerate() {
+        for node in area.nodes.iter() {
             nodes.push(*node);
-            areas.push(area.id);
+            areas.push(area_id);
         }
-        // println!(
-        //     "Area {} has {} self containment, {} population, {} workforce",
-        //     codes[area.id], area.self_containment, area.flow_from_area, area.flow_to_area
-        // );
+        println!(
+            "Area {} has {} self containment, {} population, {} workforce",
+            area_id, area.self_containment, area.flow_from_area, area.flow_to_area
+        );
     }
-    let area_metadata = ttwa
-        .areas
+    let area_metadata = ttwas
         .iter()
-        .flatten()
-        .map(|area| {
+        .enumerate()
+        .map(|(area_id, area)| {
             (
-                area.id,
+                area_id,
                 [
                     area.self_containment,
                     area.flow_from_area,
@@ -53,7 +52,7 @@ fn main() -> Result<()> {
                 ],
             )
         })
-        .collect::<HashMap<usize, [u32; 3]>>();
+        .collect::<HashMap<usize, [f64; 3]>>();
     // Write the results to a file
     if let Some(output) = args.output {
         io::write_nodes_to_areas(Path::new(&output), &codes, &nodes, &areas, &area_metadata)?;
