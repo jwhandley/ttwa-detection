@@ -78,33 +78,31 @@ pub fn travel_to_work_areas(graph: &Graph) -> TravelToWorkAreas {
 
             for (area_index, area) in areas.iter().enumerate() {
                 let tij2 = tij2(graph, node, area);
+
                 if tij2 > best_tij2 {
                     best_tij2 = tij2;
                     best_area = Some(area_index);
                 }
             }
+            let best_area = best_area.expect("tij2 should have been > 0");
 
-            if let Some(area_index) = best_area {
-                areas[area_index].nodes.insert(node);
-                areas[area_index].flow_to_area += graph.nodes[node].in_degree as f64;
-                areas[area_index].flow_from_area += graph.nodes[node].out_degree as f64;
+            areas[best_area].nodes.insert(node);
+            areas[best_area].flow_to_area += graph.nodes[node].in_degree as f64;
+            areas[best_area].flow_from_area += graph.nodes[node].out_degree as f64;
 
-                let a = graph
-                    .get_edges(node, EdgeDirection::Out)
-                    .filter(|&e| areas[area_index].nodes.contains(&e.target))
-                    .map(|edge| edge.weight)
-                    .sum::<u32>() as f64;
+            let a = graph
+                .get_edges(node, EdgeDirection::Out)
+                .filter(|&e| areas[best_area].nodes.contains(&e.target))
+                .map(|edge| edge.weight)
+                .sum::<u32>() as f64;
 
-                let b = graph
-                    .get_edges(node, EdgeDirection::In)
-                    .filter(|&e| {
-                        areas[area_index].nodes.contains(&e.source) && e.source != e.target
-                    })
-                    .map(|edge| edge.weight)
-                    .sum::<u32>() as f64;
+            let b = graph
+                .get_edges(node, EdgeDirection::In)
+                .filter(|&e| areas[best_area].nodes.contains(&e.source) && e.source != e.target)
+                .map(|edge| edge.weight)
+                .sum::<u32>() as f64;
 
-                areas[area_index].self_containment += a + b;
-            }
+            areas[best_area].self_containment += a + b;
         }
 
         iter += 1;
@@ -120,7 +118,7 @@ fn x_equation(area: &Area) -> f64 {
     let supply_self_containment = containment / area.flow_from_area;
     let demand_self_containment = containment / area.flow_to_area;
     // The methodology is unclear about how these to area combined to create a single index
-    let self_containment = (supply_self_containment*demand_self_containment).sqrt();
+    let self_containment = (supply_self_containment * demand_self_containment).sqrt();
 
     if size >= TARGET_SIZE && self_containment >= TARGET_CONTAINMENT {
         1.0 / 12.0
