@@ -140,4 +140,17 @@ impl Graph {
             EdgeDirection::Out => self.node_to_out_edges[node_index].iter(),
         }
     }
+
+    pub fn get_neighbors(&self, node_index: usize) -> impl Iterator<Item = usize> + '_ {
+        self.node_to_in_edges[node_index]
+            .iter()
+            .filter(move |edge| edge.source != node_index)
+            .map(|edge| edge.source)
+            .chain(
+                self.node_to_out_edges[node_index]
+                    .iter()
+                    .filter(move |edge| edge.target != node_index)
+                    .map(|edge| edge.target),
+            )
+    }
 }
