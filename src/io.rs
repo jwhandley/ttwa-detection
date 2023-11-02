@@ -40,7 +40,7 @@ pub fn write_nodes_to_areas(
         // Convert the metadata to strings
         writer.write_record([
             codes[*node].as_str(),
-            codes[*area].as_str(),
+            area.to_string().as_str(),
             area_metadata[area][0].to_string().as_str(),
             area_metadata[area][1].to_string().as_str(),
             area_metadata[area][2].to_string().as_str(),

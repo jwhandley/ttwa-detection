@@ -69,7 +69,7 @@ pub fn travel_to_work_areas(graph: &Graph) -> TravelToWorkAreas {
             );
         }
 
-        if worst_x_equation > THRESHOLD {
+        if worst_x_equation >= THRESHOLD {
             break;
         }
 
@@ -143,6 +143,7 @@ pub fn travel_to_work_areas(graph: &Graph) -> TravelToWorkAreas {
         iter += 1;
     }
 
+    // Remove empty areas before returning
     areas.iter().filter(|&a| a.nodes.len()>0).cloned().collect::<TravelToWorkAreas>()
 }
 
@@ -153,7 +154,7 @@ fn x_equation(area: &Area) -> f64 {
     let supply_self_containment = containment / area.flow_from_area;
     let demand_self_containment = containment / area.flow_to_area;
     // The methodology is unclear about how these to area combined to create a single index
-    let self_containment = (supply_self_containment * demand_self_containment).sqrt();
+    let self_containment = supply_self_containment.min(demand_self_containment);
 
     if size >= TARGET_SIZE && self_containment >= TARGET_CONTAINMENT {
         1.0 / 12.0
