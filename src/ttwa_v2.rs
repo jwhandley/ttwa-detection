@@ -1,5 +1,4 @@
-// use std::collections::HashSet;
-use rustc_hash::{FxHashMap, FxHashSet};
+use rustc_hash::FxHashSet;
 
 use crate::graph::{EdgeDirection, Graph};
 const TARGET_SIZE: f64 = 25000.0;
@@ -23,7 +22,7 @@ type TravelToWorkAreas = Vec<Area>;
 
 pub fn travel_to_work_areas(graph: &Graph) -> TravelToWorkAreas {
     // Assign each node to an area
-    let mut node2area = FxHashMap::default();
+    let mut node2area = Vec::new();
     let mut areas = TravelToWorkAreas::new();
     for node in graph.nodes.iter() {
         let mut area = Area {
@@ -42,12 +41,12 @@ pub fn travel_to_work_areas(graph: &Graph) -> TravelToWorkAreas {
             .sum::<u32>() as f64;
 
         areas.push(area);
-        node2area.insert(node.id, areas.len() - 1);
+        node2area.push(areas.len() - 1);
     }
     let mut iter = 0;
 
     loop {
-        assert_eq!(node2area.keys().len(), graph.nodes.len());
+        assert_eq!(node2area.len(), graph.nodes.len());
         // Find worst x_equation
         let mut worst_area = None;
         let mut worst_x_equation = f64::INFINITY;
@@ -78,7 +77,7 @@ pub fn travel_to_work_areas(graph: &Graph) -> TravelToWorkAreas {
 
         // Clear nodes from worst area
         for node in worst_area_nodes.iter() {
-            node2area.remove(node);
+            node2area[*node] = usize::MAX;
             areas[worst_area].nodes.remove(node);
             areas[worst_area].flow_from_area -= graph.nodes[*node].out_degree as f64;
             areas[worst_area].flow_to_area -= graph.nodes[*node].in_degree as f64;
@@ -100,15 +99,18 @@ pub fn travel_to_work_areas(graph: &Graph) -> TravelToWorkAreas {
         for &node in worst_area_nodes.iter() {
             let relevant_areas = graph
                 .get_neighbors(node)
-                .filter_map(|neighbor| node2area.get(&neighbor))
-                .map(|&area| area)
-                .filter(|&area| area != worst_area)
-                .collect::<FxHashSet<_>>();
+                .filter_map(|neighbor| if node2area[neighbor] != usize::MAX {Some(node2area[neighbor])} else {None}
+                )
+                .map(|area| area)
+                .filter(|&area| area != worst_area);
 
             let mut best_area = None;
             let mut best_tij2 = 0.0;
 
-            for &area_index in relevant_areas.iter() {
+            for area_index in relevant_areas {
+                assert_ne!(area_index, worst_area);
+                assert_ne!(area_index, usize::MAX);
+
                 let tij2 = tij2(graph, node, &areas, area_index, &node2area);
 
                 
@@ -119,7 +121,7 @@ pub fn travel_to_work_areas(graph: &Graph) -> TravelToWorkAreas {
                 }
             }
             let best_area = best_area.expect("tij2 should have been > 0");
-            node2area.insert(node, best_area);
+            node2area[node] = best_area;
 
             areas[best_area].nodes.insert(node);
             areas[best_area].flow_to_area += graph.nodes[node].in_degree as f64;
@@ -167,7 +169,7 @@ fn x_equation(area: &Area) -> f64 {
     }
 }
 
-fn tij2(graph: &Graph, node: NodeIndex, areas: &TravelToWorkAreas, area: usize, node2area: &FxHashMap<NodeIndex, usize>) -> f64 {
+fn tij2(graph: &Graph, node: NodeIndex, areas: &TravelToWorkAreas, area: usize, node2area: &Vec<usize>) -> f64 {
     let area_to_node = flow_area_to_node(graph, node, area, node2area);
     let node_to_area = flow_node_to_area(graph, node, area, node2area);
 
@@ -182,18 +184,18 @@ fn tij2(graph: &Graph, node: NodeIndex, areas: &TravelToWorkAreas, area: usize, 
     a * b + c * d
 }
 
-fn flow_area_to_node(graph: &Graph, node: NodeIndex, area: usize, node2area: &FxHashMap<NodeIndex, usize>) -> f64 {
+fn flow_area_to_node(graph: &Graph, node: NodeIndex, area: usize, node2area: &Vec<usize>) -> f64 {
     graph
         .get_edges(node, EdgeDirection::In)
-        .filter(|e| node2area.get(&e.source) == Some(&area))
+        .filter(|e| node2area[e.source] == area)
         .map(|e| e.weight)
         .sum::<u32>() as f64
 }
 
-fn flow_node_to_area(graph: &Graph, node: NodeIndex, area: usize, node2area: &FxHashMap<NodeIndex, usize>) -> f64 {
+fn flow_node_to_area(graph: &Graph, node: NodeIndex, area: usize, node2area: &Vec<usize>) -> f64 {
     graph
         .get_edges(node, EdgeDirection::Out)
-        .filter(|e| node2area.get(&e.target) == Some(&area))
+        .filter(|e| node2area[e.target] == area)
         .map(|e| e.weight)
         .sum::<u32>() as f64
 }
