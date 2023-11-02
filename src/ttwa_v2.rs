@@ -51,7 +51,11 @@ pub fn travel_to_work_areas(graph: &Graph) -> TravelToWorkAreas {
         let mut worst_area = None;
         let mut worst_x_equation = f64::INFINITY;
 
-        for (area_index, area) in areas.iter().enumerate().filter(|(_,a)| !a.nodes.is_empty()) {
+        for (area_index, area) in areas
+            .iter()
+            .enumerate()
+            .filter(|(_, a)| !a.nodes.is_empty())
+        {
             let x_equation = x_equation(area);
             if x_equation < worst_x_equation {
                 worst_x_equation = x_equation;
@@ -84,8 +88,13 @@ pub fn travel_to_work_areas(graph: &Graph) -> TravelToWorkAreas {
         for &node in worst_area_nodes.iter() {
             let relevant_areas = graph
                 .get_neighbors(node)
-                .filter_map(|neighbor| if node2area[neighbor] != usize::MAX {Some(node2area[neighbor])} else {None}
-                )
+                .filter_map(|neighbor| {
+                    if node2area[neighbor] != usize::MAX {
+                        Some(node2area[neighbor])
+                    } else {
+                        None
+                    }
+                })
                 .filter(|&area| area != worst_area);
 
             let mut best_area = None;
@@ -96,8 +105,6 @@ pub fn travel_to_work_areas(graph: &Graph) -> TravelToWorkAreas {
                 assert_ne!(area_index, usize::MAX); // We have already removed all nodes from this area
 
                 let tij2 = tij2(graph, node, &areas, area_index, &node2area);
-
-                
 
                 if tij2 > best_tij2 {
                     best_tij2 = tij2;
@@ -130,7 +137,11 @@ pub fn travel_to_work_areas(graph: &Graph) -> TravelToWorkAreas {
     }
 
     // Remove empty areas before returning
-    areas.iter().filter(|&a| !a.nodes.is_empty()).cloned().collect::<TravelToWorkAreas>()
+    areas
+        .iter()
+        .filter(|&a| !a.nodes.is_empty())
+        .cloned()
+        .collect::<TravelToWorkAreas>()
 }
 
 fn x_equation(area: &Area) -> f64 {
@@ -152,7 +163,13 @@ fn x_equation(area: &Area) -> f64 {
     }
 }
 
-fn tij2(graph: &Graph, node: NodeIndex, areas: &TravelToWorkAreas, area: usize, node2area: &[usize]) -> f64 {
+fn tij2(
+    graph: &Graph,
+    node: NodeIndex,
+    areas: &TravelToWorkAreas,
+    area: usize,
+    node2area: &[usize],
+) -> f64 {
     let area_to_node = flow_area_to_node(graph, node, area, node2area);
     let node_to_area = flow_node_to_area(graph, node, area, node2area);
 
