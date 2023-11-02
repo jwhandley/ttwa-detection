@@ -79,21 +79,6 @@ pub fn travel_to_work_areas(graph: &Graph) -> TravelToWorkAreas {
         for node in worst_area_nodes.iter() {
             node2area[*node] = usize::MAX;
             areas[worst_area].nodes.remove(node);
-            areas[worst_area].flow_from_area -= graph.nodes[*node].out_degree as f64;
-            areas[worst_area].flow_to_area -= graph.nodes[*node].in_degree as f64;
-            let a = graph
-                .get_edges(*node, EdgeDirection::Out)
-                .filter(|&e| areas[worst_area].nodes.contains(&e.target))
-                .map(|edge| edge.weight)
-                .sum::<u32>() as f64;
-
-            let b = graph
-                .get_edges(*node, EdgeDirection::In)
-                .filter(|&e| areas[worst_area].nodes.contains(&e.source) && e.source != e.target)
-                .map(|edge| edge.weight)
-                .sum::<u32>() as f64;
-
-            areas[worst_area].self_containment -= a + b;
         }
 
         for &node in worst_area_nodes.iter() {
@@ -108,8 +93,8 @@ pub fn travel_to_work_areas(graph: &Graph) -> TravelToWorkAreas {
             let mut best_tij2 = 0.0;
 
             for area_index in relevant_areas {
-                assert_ne!(area_index, worst_area);
-                assert_ne!(area_index, usize::MAX);
+                assert_ne!(area_index, worst_area); // We can't check the worst area because we just removed it
+                assert_ne!(area_index, usize::MAX); // We have already removed all nodes from this area
 
                 let tij2 = tij2(graph, node, &areas, area_index, &node2area);
 
@@ -155,7 +140,6 @@ fn x_equation(area: &Area) -> f64 {
 
     let supply_self_containment = containment / area.flow_from_area;
     let demand_self_containment = containment / area.flow_to_area;
-    // The methodology is unclear about how these to area combined to create a single index
     let self_containment = supply_self_containment.min(demand_self_containment);
 
     if size >= TARGET_SIZE && self_containment >= TARGET_CONTAINMENT {
